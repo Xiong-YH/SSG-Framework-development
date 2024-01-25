@@ -1,4 +1,9 @@
-"use strict"; function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { newObj[key] = obj[key]; } } } newObj.default = obj; return newObj; } } function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }// src/node/cli.ts
+"use strict"; function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { newObj[key] = obj[key]; } } } newObj.default = obj; return newObj; } } function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+
+var _chunkKRUINHOUjs = require('./chunk-KRUINHOU.js');
+
+// src/node/cli.ts
 var _cac = require('cac'); var _cac2 = _interopRequireDefault(_cac);
 var _path = require('path');
 
@@ -8,25 +13,6 @@ var _vite = require('vite');
 var _fsextra = require('fs-extra'); var _fsextra2 = _interopRequireDefault(_fsextra);
 var _pluginreact = require('@vitejs/plugin-react'); var _pluginreact2 = _interopRequireDefault(_pluginreact);
 var _url = require('url');
-
-// src/node/constants/index.ts
-
-var PACKAGE_ROOT = _path.join.call(void 0, __dirname, "..");
-var DEFAULT_TEMPLATE_PATH = _path.join.call(void 0, PACKAGE_ROOT, "template.html");
-var CLIENT_ENTRY_PATH = _path.join.call(void 0, 
-  PACKAGE_ROOT,
-  "src",
-  "runtime",
-  "client-entry.tsx"
-);
-var SERVER_ENTRY_PATH = _path.join.call(void 0, 
-  PACKAGE_ROOT,
-  "src",
-  "runtime",
-  "ssr-entry.tsx"
-);
-
-// src/node/build.tsx
 async function bunlde(root) {
   try {
     const resolveViteConfig = (isServer) => {
@@ -38,7 +24,7 @@ async function bunlde(root) {
           outDir: isServer ? ".temp" : "build",
           ssr: isServer,
           rollupOptions: {
-            input: isServer ? SERVER_ENTRY_PATH : CLIENT_ENTRY_PATH,
+            input: isServer ? _chunkKRUINHOUjs.SERVER_ENTRY_PATH : _chunkKRUINHOUjs.CLIENT_ENTRY_PATH,
             output: {
               format: isServer ? "cjs" : "esm"
             }
@@ -95,10 +81,16 @@ async function renderPage(render, root, clientBundle) {
 var cli = _cac2.default.call(void 0, "island").version("0.0.0").help();
 cli.command("dev [root]", "start dev server").action(async (root) => {
   root = root ? _path.resolve.call(void 0, root) : process.cwd();
-  const createServer = (root2) => {
+  const createServer = async () => {
+    const { createDevServer } = await Promise.resolve().then(() => _interopRequireWildcard(require("./dev.js")));
+    const server = await createDevServer(root, async () => {
+      await server.close();
+      await createServer();
+    });
+    await server.listen();
+    server.printUrls();
   };
-  await server.listen();
-  server.printUrls();
+  await createServer();
 });
 cli.command("build [root]", "build in production").action(async (root) => {
   try {

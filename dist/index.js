@@ -1,11 +1,9 @@
-"use strict";Object.defineProperty(exports, "__esModule", {value: true});// src/node/config.ts
-var _vite = require('vite');
-function defineConfig(config) {
-  return config;
-}
+"use strict";Object.defineProperty(exports, "__esModule", {value: true});
+
+var _chunkICQFTZDUjs = require('./chunk-ICQFTZDU.js');
 
 // src/node/index.ts
-var node_default = defineConfig({
+var node_default = _chunkICQFTZDUjs.defineConfig.call(void 0, {
   title: "s1111"
 });
 
