@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import sideData from 'island:site-data';
+import { BrowserRouter } from 'react-router-dom';
 
 function RenderInBrowser() {
   const containerEl = document.getElementById('root');
@@ -9,8 +9,11 @@ function RenderInBrowser() {
     throw new Error('#root element not found');
   }
 
-  createRoot(containerEl).render(<App />);
-  console.log(sideData);
+  createRoot(containerEl).render(
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
 }
 
 RenderInBrowser();

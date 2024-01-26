@@ -1,28 +1,35 @@
 import {
   CLIENT_ENTRY_PATH,
-  SERVER_ENTRY_PATH
-} from "./chunk-2IFRJ42P.mjs";
-import "./chunk-JIN4FLKK.mjs";
+  SERVER_ENTRY_PATH,
+  pluginConfig
+} from "./chunk-CHRQ7APW.mjs";
+import {
+  resolveConfig
+} from "./chunk-DGIDFQB4.mjs";
 
 // src/node/cli.ts
 import cac from "cac";
 import { resolve } from "path";
 
-// src/node/build.tsx
+// src/node/build.ts
 import { build as viteBuild } from "vite";
 import { join } from "path";
 import fs from "fs-extra";
 import pluginReact from "@vitejs/plugin-react";
 import { pathToFileURL } from "url";
-async function bunlde(root) {
+async function bunlde(root, config) {
   try {
     const resolveViteConfig = (isServer) => {
       return {
         mode: "production",
         root,
-        plugins: [pluginReact()],
+        plugins: [pluginReact(), pluginConfig(config)],
+        ssr: {
+          noExternal: ["react-router-dom"]
+        },
         build: {
-          outDir: isServer ? ".temp" : "build",
+          minify: false,
+          outDir: isServer ? join(root, ".temp") : "build",
           ssr: isServer,
           rollupOptions: {
             input: isServer ? SERVER_ENTRY_PATH : CLIENT_ENTRY_PATH,
@@ -48,13 +55,17 @@ async function bunlde(root) {
     console.log(error);
   }
 }
-async function build(root) {
-  const [clientBundle, serverBundle] = await bunlde(root);
+async function build(root, config) {
+  const [clientBundle] = await bunlde(root, config);
   const serverEntryPath = join(root, ".temp", "ssr-entry.js");
   const { render } = await import(pathToFileURL(serverEntryPath).toString());
-  await renderPage(render, root, clientBundle);
+  try {
+    await renderPage(render, root, clientBundle);
+  } catch (error) {
+    console.log("Render page error.\n", error);
+  }
 }
-async function renderPage(render, root, clientBundle) {
+async function renderPage(render, root = process.cwd(), clientBundle) {
   const clientChunk = clientBundle.output.find(
     (chunk) => chunk.type === "chunk" && chunk.isEntry
   );
@@ -74,6 +85,7 @@ async function renderPage(render, root, clientBundle) {
     </body>
     </html>
     `.trim();
+  await fs.ensureDir(join(root, "build"));
   await fs.writeFile(join(root, "build", "index.html"), html);
   await fs.remove(join(root, ".temp"));
 }
@@ -96,7 +108,8 @@ cli.command("dev [root]", "start dev server").action(async (root) => {
 cli.command("build [root]", "build in production").action(async (root) => {
   try {
     root = resolve(root);
-    await build(root);
+    const config = await resolveConfig(root, "build", "production");
+    await build(root, config);
   } catch (e) {
     console.log(e);
   }

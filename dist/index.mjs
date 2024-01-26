@@ -1,7 +1,6 @@
 import {
   defineConfig
-} from "./chunk-VO2J5KVO.mjs";
-import "./chunk-JIN4FLKK.mjs";
+} from "./chunk-DGIDFQB4.mjs";
 
 // src/node/index.ts
 var node_default = defineConfig({
