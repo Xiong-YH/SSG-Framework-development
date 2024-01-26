@@ -2,10 +2,10 @@ import {
   CLIENT_ENTRY_PATH,
   SERVER_ENTRY_PATH,
   createVitePlugins
-} from "./chunk-X63OVSG2.mjs";
+} from "./chunk-KD7MVNCQ.mjs";
 import {
   resolveConfig
-} from "./chunk-DGIDFQB4.mjs";
+} from "./chunk-KSFXWFDG.mjs";
 
 // src/node/cli.ts
 import cac from "cac";

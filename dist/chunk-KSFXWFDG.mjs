@@ -1,4 +1,4 @@
-// node_modules/.pnpm/tsup@6.7.0_ts-node@10.9.2_typescript@4.9.5/node_modules/tsup/assets/esm_shims.js
+// node_modules/.pnpm/tsup@6.7.0_postcss@8.4.33_ts-node@10.9.2_typescript@4.9.5/node_modules/tsup/assets/esm_shims.js
 import { fileURLToPath } from "url";
 import path from "path";
 var getFilename = () => fileURLToPath(import.meta.url);

@@ -2,7 +2,7 @@
 
 
 
-var _chunk5OLNIFISjs = require('./chunk-5OLNIFIS.js');
+var _chunkPKGZNC3Ajs = require('./chunk-PKGZNC3A.js');
 
 
 var _chunkICQFTZDUjs = require('./chunk-ICQFTZDU.js');
@@ -22,7 +22,7 @@ async function bunlde(root, config) {
       return {
         mode: "production",
         root,
-        plugins: await _chunk5OLNIFISjs.createVitePlugins.call(void 0, config, isServer),
+        plugins: await _chunkPKGZNC3Ajs.createVitePlugins.call(void 0, config, isServer),
         ssr: {
           noExternal: ["react-router-dom"]
         },
@@ -31,7 +31,7 @@ async function bunlde(root, config) {
           outDir: isServer ? _path.join.call(void 0, root, ".temp") : _path.join.call(void 0, root, "build"),
           ssr: isServer,
           rollupOptions: {
-            input: isServer ? _chunk5OLNIFISjs.SERVER_ENTRY_PATH : _chunk5OLNIFISjs.CLIENT_ENTRY_PATH,
+            input: isServer ? _chunkPKGZNC3Ajs.SERVER_ENTRY_PATH : _chunkPKGZNC3Ajs.CLIENT_ENTRY_PATH,
             output: {
               format: isServer ? "cjs" : "esm"
             }
