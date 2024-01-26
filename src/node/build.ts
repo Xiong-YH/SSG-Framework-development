@@ -1,27 +1,30 @@
 import { InlineConfig, build as viteBuild } from 'vite';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import type { RollupOutput } from 'rollup';
 import fs from 'fs-extra';
-import pluginReact from '@vitejs/plugin-react';
 import { pathToFileURL } from 'url';
 
 import { CLIENT_ENTRY_PATH, SERVER_ENTRY_PATH } from './constants';
 import { SiteConfig } from 'shared/types';
-import { pluginConfig } from './plugin-island/PluginConfig';
+import { createVitePlugins } from './vitePlugins';
+import { Route } from './plugin-router';
 
 export async function bunlde(root: string, config: SiteConfig) {
   try {
-    const resolveViteConfig = (isServer: boolean): InlineConfig => {
+    //书写打包时配置
+    const resolveViteConfig = async (
+      isServer: boolean
+    ): Promise<InlineConfig> => {
       return {
         mode: 'production',
         root,
-        plugins: [pluginReact(), pluginConfig(config)],
+        plugins: await createVitePlugins(config, isServer),
         ssr: {
           noExternal: ['react-router-dom']
         },
         build: {
           minify: false,
-          outDir: isServer ? join(root, '.temp') : 'build',
+          outDir: isServer ? join(root, '.temp') : join(root, 'build'),
           ssr: isServer,
           rollupOptions: {
             input: isServer ? SERVER_ENTRY_PATH : CLIENT_ENTRY_PATH,
@@ -34,11 +37,11 @@ export async function bunlde(root: string, config: SiteConfig) {
     };
 
     const clientBuild = async () => {
-      return viteBuild(resolveViteConfig(false));
+      return await viteBuild(await resolveViteConfig(false));
     };
 
     const serverBuild = async () => {
-      return viteBuild(resolveViteConfig(true));
+      return await viteBuild(await resolveViteConfig(true));
     };
 
     const [clientBundle, serverBundle] = await Promise.all([
@@ -55,6 +58,48 @@ export async function bunlde(root: string, config: SiteConfig) {
   }
 }
 
+//renderPage函数
+export async function renderPage(
+  render: (url: string) => string,
+  root: string = process.cwd(),
+  clientBundle: RollupOutput,
+  routes: Route[]
+) {
+  const clientChunk = clientBundle.output.find(
+    (chunk) => chunk.type === 'chunk' && chunk.isEntry
+  );
+  console.log('Rendering page in server side...');
+
+  return Promise.all(
+    routes.map(async (route) => {
+      const appHtml = render(route.path);
+
+      //渲染页面
+      const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Document</title>
+      </head>
+      <body>
+          <div id="root">${appHtml}</div>
+          <script type="module" src="${clientChunk.fileName}"></script>
+      </body>
+      </html>
+      `.trim();
+
+      const fileName = route.path.endsWith('/')
+        ? `${route.path}index.html`
+        : `${route.path}.html`;
+      await fs.ensureDir(join(root, 'build', dirname(fileName))); //确定文件存在
+      await fs.writeFile(join(root, 'build', fileName), html);
+      // await fs.remove(join(root, '.temp'));
+    })
+  );
+}
+
 //build函数
 export async function build(root: string, config: SiteConfig) {
   //打包代码，包括 client 端 + server 端
@@ -62,41 +107,13 @@ export async function build(root: string, config: SiteConfig) {
   //引入打包好的 server-entry 模块
   const serverEntryPath = join(root, '.temp', 'ssr-entry.js'); //拿到路径
   //拿到其中的渲染函数
-  const { render } = await import(pathToFileURL(serverEntryPath).toString());
+  const { render, routes } = await import(
+    pathToFileURL(serverEntryPath).toString()
+  );
   //服务端渲染，产出
   try {
-    await renderPage(render, root, clientBundle);
+    await renderPage(render, root, clientBundle, routes);
   } catch (error) {
     console.log('Render page error.\n', error);
   }
-}
-
-export async function renderPage(
-  render: () => string,
-  root: string = process.cwd(),
-  clientBundle: RollupOutput
-) {
-  const clientChunk = clientBundle.output.find(
-    (chunk) => chunk.type === 'chunk' && chunk.isEntry
-  );
-  console.log('Rendering page in server side...');
-
-  const appHtml = render();
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document</title>
-    </head>
-    <body>
-        <div id="root">${appHtml}</div>
-        <script type="module" src="${clientChunk.fileName}"></script>
-    </body>
-    </html>
-    `.trim();
-  await fs.ensureDir(join(root, 'build')); //确定文件存在
-  await fs.writeFile(join(root, 'build', 'index.html'), html);
-  await fs.remove(join(root, '.temp'));
 }

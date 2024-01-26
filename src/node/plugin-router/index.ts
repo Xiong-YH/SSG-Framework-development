@@ -3,6 +3,13 @@ import { RouteService } from './RouteService';
 
 interface PluginOption {
   root: string;
+  isSSR: boolean;
+}
+
+export interface Route {
+  path: string;
+  element: React.ReactElement;
+  filePath: string;
 }
 
 export const CONVENTIONAL_ROUTE_ID = 'island:routes';
@@ -24,7 +31,7 @@ export function PluginRoutes(options: PluginOption): Plugin {
 
     load(id) {
       if (id === '\0' + CONVENTIONAL_ROUTE_ID) {
-        return routeService.generateRouteCode();
+        return routeService.generateRouteCode(options.isSSR || false);
       }
     }
   };
