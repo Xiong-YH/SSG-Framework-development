@@ -1,9 +1,9 @@
-import { a as jsx } from "./client-entry.be75cc9c.js";
-function A() {
+import { j as jsx } from "./client-entry.808add98.js";
+function C() {
   return /* @__PURE__ */ jsx("div", {
     children: "Hello, route A"
   });
 }
 export {
-  A as default
+  C as default
 };
