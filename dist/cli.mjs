@@ -1,8 +1,10 @@
 import {
   CLIENT_ENTRY_PATH,
+  CLIENT_OUTPUT,
+  MASK_SPLITTER,
   SERVER_ENTRY_PATH,
   createVitePlugins
-} from "./chunk-KD7MVNCQ.mjs";
+} from "./chunk-2FPK5VL4.mjs";
 import {
   resolveConfig
 } from "./chunk-KSFXWFDG.mjs";
@@ -22,13 +24,13 @@ async function bunlde(root, config) {
       return {
         mode: "production",
         root,
-        plugins: await createVitePlugins(config, isServer),
+        plugins: await createVitePlugins(config, null, isServer),
         ssr: {
-          noExternal: ["react-router-dom"]
+          noExternal: ["react-router-dom", "lodash-es"]
         },
         build: {
           minify: false,
-          outDir: isServer ? join(root, ".temp") : join(root, "build"),
+          outDir: isServer ? join(root, ".temp") : join(root, CLIENT_OUTPUT),
           ssr: isServer,
           rollupOptions: {
             input: isServer ? SERVER_ENTRY_PATH : CLIENT_ENTRY_PATH,
@@ -49,6 +51,10 @@ async function bunlde(root, config) {
       clientBuild(),
       serverBuild()
     ]);
+    const publicDir = join(root, "public");
+    if (fs.pathExistsSync(publicDir)) {
+      await fs.copy(publicDir, join(root, CLIENT_OUTPUT));
+    }
     return [clientBundle, serverBundle];
   } catch (error) {
     console.log(error);
@@ -58,10 +64,17 @@ async function renderPage(render, root = process.cwd(), clientBundle, routes) {
   const clientChunk = clientBundle.output.find(
     (chunk) => chunk.type === "chunk" && chunk.isEntry
   );
+  debugger;
   console.log("Rendering page in server side...");
   return Promise.all(
     routes.map(async (route) => {
-      const appHtml = render(route.path);
+      const result = await render(route.path);
+      const { appHtml, islandPathToMap, propsData = [] } = result;
+      const islandBundle = await buildIsland(root, islandPathToMap);
+      const islandCode = islandBundle.output[0].code;
+      const styleAssets = clientBundle.output.filter(
+        (chunk) => chunk.type === "asset" && chunk.fileName.endsWith(".css")
+      );
       const html = `
       <!DOCTYPE html>
       <html lang="en">
@@ -69,9 +82,11 @@ async function renderPage(render, root = process.cwd(), clientBundle, routes) {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Document</title>
+          ${styleAssets.map((item) => `<link rel="stylesheet" href="/${item.fileName}">`).join("\n")}
       </head>
       <body>
           <div id="root">${appHtml}</div>
+          <script type="module">${islandCode}</script>
           <script type="module" src="${clientChunk.fileName}"></script>
       </body>
       </html>
@@ -91,6 +106,57 @@ async function build(root, config) {
   } catch (error) {
     console.log("Render page error.\n", error);
   }
+}
+async function buildIsland(root, islandPathToMap) {
+  const islandInjectCode = `
+    ${Object.entries(islandPathToMap).map(
+    ([islandId, islandPath]) => `import {${islandId}} from '${islandPath}'`
+  ).join("")}
+    window.ISLAND=${Object.keys(islandPathToMap).join(",")}
+    window.ISLAND_PROPS = JSON.parse(
+      document.getElementById('island-props').textContent
+    )
+  `;
+  const inject = "island:inject";
+  return viteBuild({
+    mode: "production",
+    build: {
+      outDir: join(root, ".temp"),
+      rollupOptions: {
+        input: inject
+      }
+    },
+    plugins: [
+      {
+        name: "island:inject",
+        enforce: "post",
+        //构建之后使用的插件
+        resolveId(id) {
+          if (id.includes(MASK_SPLITTER)) {
+            const [originId, importor] = id.split(MASK_SPLITTER);
+            return this.resolve(originId, importor, { skipSelf: true });
+          }
+          if (id === inject) {
+            return id;
+          }
+        },
+        //
+        load(id) {
+          if (id === inject) {
+            return islandInjectCode;
+          }
+        },
+        //打包产物不加入静态资源文件,只需要JS
+        generateBundle(_, bundle) {
+          for (const name in bundle) {
+            if (bundle[name].type === "asset") {
+              delete bundle[name];
+            }
+          }
+        }
+      }
+    ]
+  });
 }
 
 // src/node/cli.ts

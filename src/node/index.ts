@@ -1,5 +1,1 @@
-import { defineConfig } from './config';
-
-export default defineConfig({
-  title: 's1111'
-});
+export { defineConfig } from './config';

@@ -10,7 +10,7 @@ interface TocItem {
   depth: number;
   text: string;
 }
-const slugger = new Slugger();
+
 interface ChildNode {
   type: 'text' | 'inlineCode' | 'link';
   value: string;
@@ -20,6 +20,9 @@ interface ChildNode {
 export const remarkPluginToc: Plugin<[], Root> = () => {
   return (tree) => {
     const toc: TocItem[] = [];
+
+    const slugger = new Slugger(); //
+
     visit(tree, 'heading', (node) => {
       //判断条件
       if (!node.depth || !node.children) {
@@ -61,9 +64,8 @@ export const remarkPluginToc: Plugin<[], Root> = () => {
             }
           })
           .join('');
-        // console.log(originText);
+
         const id = slugger.slug(originText);
-        // console.log('id是', id);
 
         toc.push({
           id,
@@ -74,7 +76,7 @@ export const remarkPluginToc: Plugin<[], Root> = () => {
     });
 
     const insertCode = `export const toc = ${JSON.stringify(toc, null, 2)}`;
-    // console.log(tree);
+
     tree.children.push({
       type: 'mdxjsEsm',
       value: insertCode,

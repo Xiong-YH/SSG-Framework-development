@@ -29,7 +29,7 @@ export const rehypePluginShiki: Plugin<[Options], Root> = ({ highlight }) => {
         const highlightCode = highlight.codeToHtml(content, { lang });
         //转化为AST
         const fragmentAST = fromHtml(highlightCode, { fragment: true });
-        // console.log('fragmentAST是', fragmentAST);
+
         parent.children.splice(index, 1, ...fragmentAST.children);
       }
     });

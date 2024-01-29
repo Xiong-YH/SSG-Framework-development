@@ -1,6 +1,9 @@
 import { Plugin } from 'vite';
 import { SiteConfig } from '../../shared/types';
-import { relative } from 'path';
+import path, { join, relative } from 'path';
+import { PACKAGE_ROOT, PUBLIC_DIR } from 'node/constants';
+import sirv from 'sirv';
+import fs from 'fs-extra';
 
 const SITE_DATA_ID = 'island:site-data';
 
@@ -9,7 +12,28 @@ export function pluginConfig(
   restart?: () => Promise<void>
 ): Plugin {
   return {
-    name: 'island:site-data',
+    name: 'island:config',
+    configureServer(server) {
+      const publicDir = join(config.root, PUBLIC_DIR);
+      if (fs.pathExistsSync(publicDir)) {
+        server.middlewares.use(sirv(publicDir));
+      }
+    },
+    config() {
+      return {
+        root: PACKAGE_ROOT,
+        resolve: {
+          alias: {
+            '@runtime': join(PACKAGE_ROOT, 'src', 'runtime', 'index.ts')
+          }
+        },
+        css: {
+          modules: {
+            localsConvention: 'camelCaseOnly'
+          }
+        }
+      };
+    },
     //虚拟模块钩子
     resolveId(id) {
       if (id === SITE_DATA_ID) {

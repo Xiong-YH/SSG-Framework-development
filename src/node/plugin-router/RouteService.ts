@@ -26,7 +26,6 @@ export class RouteService {
     //规范文件路径
     files.forEach((file) => {
       const fileRelativePath = normalizePath(relative(this.#scanDir, file));
-      // console.log('fileRelativePath', fileRelativePath);
 
       //将文件路径替换
       const routePath = this.normalizeRoutePath(fileRelativePath);
@@ -60,7 +59,7 @@ export class RouteService {
     export const routes = [
         ${this.#routeData
           .map((route, index) => {
-            return `{ path: '${route.routePath}', element: React.createElement(Route${index}) }`;
+            return `{ path: '${route.routePath}', element: React.createElement(Route${index}), preload:()=>import('${route.absolutePath}') }`;
           })
           .join(',\n')}
         ];

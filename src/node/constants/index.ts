@@ -17,3 +17,9 @@ export const SERVER_ENTRY_PATH = join(
   'runtime',
   'ssr-entry.tsx'
 );
+
+export const PUBLIC_DIR = 'public';
+
+export const MASK_SPLITTER = '!!ISLAND!!';
+
+export const CLIENT_OUTPUT = 'build';

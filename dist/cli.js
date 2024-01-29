@@ -2,7 +2,9 @@
 
 
 
-var _chunkPKGZNC3Ajs = require('./chunk-PKGZNC3A.js');
+
+
+var _chunkADZICLDIjs = require('./chunk-ADZICLDI.js');
 
 
 var _chunkICQFTZDUjs = require('./chunk-ICQFTZDU.js');
@@ -22,16 +24,16 @@ async function bunlde(root, config) {
       return {
         mode: "production",
         root,
-        plugins: await _chunkPKGZNC3Ajs.createVitePlugins.call(void 0, config, isServer),
+        plugins: await _chunkADZICLDIjs.createVitePlugins.call(void 0, config, null, isServer),
         ssr: {
-          noExternal: ["react-router-dom"]
+          noExternal: ["react-router-dom", "lodash-es"]
         },
         build: {
           minify: false,
-          outDir: isServer ? _path.join.call(void 0, root, ".temp") : _path.join.call(void 0, root, "build"),
+          outDir: isServer ? _path.join.call(void 0, root, ".temp") : _path.join.call(void 0, root, _chunkADZICLDIjs.CLIENT_OUTPUT),
           ssr: isServer,
           rollupOptions: {
-            input: isServer ? _chunkPKGZNC3Ajs.SERVER_ENTRY_PATH : _chunkPKGZNC3Ajs.CLIENT_ENTRY_PATH,
+            input: isServer ? _chunkADZICLDIjs.SERVER_ENTRY_PATH : _chunkADZICLDIjs.CLIENT_ENTRY_PATH,
             output: {
               format: isServer ? "cjs" : "esm"
             }
@@ -49,6 +51,10 @@ async function bunlde(root, config) {
       clientBuild(),
       serverBuild()
     ]);
+    const publicDir = _path.join.call(void 0, root, "public");
+    if (_fsextra2.default.pathExistsSync(publicDir)) {
+      await _fsextra2.default.copy(publicDir, _path.join.call(void 0, root, _chunkADZICLDIjs.CLIENT_OUTPUT));
+    }
     return [clientBundle, serverBundle];
   } catch (error) {
     console.log(error);
@@ -58,10 +64,17 @@ async function renderPage(render, root = process.cwd(), clientBundle, routes) {
   const clientChunk = clientBundle.output.find(
     (chunk) => chunk.type === "chunk" && chunk.isEntry
   );
+  debugger;
   console.log("Rendering page in server side...");
   return Promise.all(
     routes.map(async (route) => {
-      const appHtml = render(route.path);
+      const result = await render(route.path);
+      const { appHtml, islandPathToMap, propsData = [] } = result;
+      const islandBundle = await buildIsland(root, islandPathToMap);
+      const islandCode = islandBundle.output[0].code;
+      const styleAssets = clientBundle.output.filter(
+        (chunk) => chunk.type === "asset" && chunk.fileName.endsWith(".css")
+      );
       const html = `
       <!DOCTYPE html>
       <html lang="en">
@@ -69,9 +82,11 @@ async function renderPage(render, root = process.cwd(), clientBundle, routes) {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Document</title>
+          ${styleAssets.map((item) => `<link rel="stylesheet" href="/${item.fileName}">`).join("\n")}
       </head>
       <body>
           <div id="root">${appHtml}</div>
+          <script type="module">${islandCode}</script>
           <script type="module" src="${clientChunk.fileName}"></script>
       </body>
       </html>
@@ -91,6 +106,57 @@ async function build(root, config) {
   } catch (error) {
     console.log("Render page error.\n", error);
   }
+}
+async function buildIsland(root, islandPathToMap) {
+  const islandInjectCode = `
+    ${Object.entries(islandPathToMap).map(
+    ([islandId, islandPath]) => `import {${islandId}} from '${islandPath}'`
+  ).join("")}
+    window.ISLAND=${Object.keys(islandPathToMap).join(",")}
+    window.ISLAND_PROPS = JSON.parse(
+      document.getElementById('island-props').textContent
+    )
+  `;
+  const inject = "island:inject";
+  return _vite.build.call(void 0, {
+    mode: "production",
+    build: {
+      outDir: _path.join.call(void 0, root, ".temp"),
+      rollupOptions: {
+        input: inject
+      }
+    },
+    plugins: [
+      {
+        name: "island:inject",
+        enforce: "post",
+        //构建之后使用的插件
+        resolveId(id) {
+          if (id.includes(_chunkADZICLDIjs.MASK_SPLITTER)) {
+            const [originId, importor] = id.split(_chunkADZICLDIjs.MASK_SPLITTER);
+            return this.resolve(originId, importor, { skipSelf: true });
+          }
+          if (id === inject) {
+            return id;
+          }
+        },
+        //
+        load(id) {
+          if (id === inject) {
+            return islandInjectCode;
+          }
+        },
+        //打包产物不加入静态资源文件,只需要JS
+        generateBundle(_, bundle) {
+          for (const name in bundle) {
+            if (bundle[name].type === "asset") {
+              delete bundle[name];
+            }
+          }
+        }
+      }
+    ]
+  });
 }
 
 // src/node/cli.ts
